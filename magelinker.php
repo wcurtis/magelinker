@@ -1,11 +1,79 @@
 <?php
 
-const MAGE_PATH = 'C:/dev/prog/m1610dev';
-const MODULE_PATH = 'C:/dev/prog/rewardsinstoredev';
+const DS = DIRECTORY_SEPARATOR;
+const DRY_RUN = false;
+const SHOW_PARAMS = false;
 
-$linker = new MageLinker(MAGE_PATH, MODULE_PATH);
+if (SHOW_PARAMS || isset($_GET['debug'])) {
+	echoParams();
+}
+
+$magePath = getcwd();
+$modulePath = null;
+$isTbtModule = true;
+
+if (isset($_GET['module'])) {
+	$modulePath = $_GET['module'];
+}
+
+if (isset($_GET['istbtmodule'])) {
+	$isTbtModule = true;
+}
+
+?>
+
+<style>
+.textBox {
+    width:300px;
+}
+</style>
+
+<h1>Mage Linker [Beta]</h1>
+
+<p><b>Mage Path: </b><?php echo $magePath; ?></p>
+
+<form name="input" method="get">
+	<b>Module Path: </b><input type="text" class="textBox" name="module" value="<?php echo dirname($magePath) . DS; ?>" /><br/><br/>
+	<input type="checkbox" name="istbtmodule" value="checked" checked="checked"/>Is TBT module<br /><br/>
+	<input type="submit" value="Submit" />
+</form>
+
+<br/>
+
+<?php 
+
+// Done if no module specified
+if (!$modulePath) {
+	return;
+}
+
+if (DRY_RUN) {
+    echo '<p><b>DRY RUN (no linking will be done)</b></p>';
+}
+
+$linker = new MageLinker($magePath, $modulePath);
 $linker->link();
+echo '<p><b>Done.</b></p>';
 return;
+
+/***************************************************
+* HELPER FUNCTIONS START HERE
+***************************************************/
+
+function echoParams() {
+	echo p('POST: ' . print_r($_POST, true));
+	echo p('GET: ' . print_r($_GET));
+	echo p('REQUEST: ' . print_r($_REQUEST));
+}
+
+function p($line)
+{
+	echo '<pre>' . $line . '</pre>';
+}
+
+/***************************************************
+ * CLASSES START HERE
+ ***************************************************/
 
 class MageLinker {
 
@@ -26,8 +94,8 @@ class MageLinker {
     
     function __construct($magePath, $modulePath) 
     {
-        $this->magePath = $magePath;
-        $this->modulePath = $modulePath;
+        $this->magePath = $this->unixPath($magePath);
+        $this->modulePath = $this->unixPath($modulePath);
     }
     
     public function link() 
@@ -53,7 +121,7 @@ class MageLinker {
             }
             
             // If it is a TBT Shared directory, just create the dir and continue
-            if (mkdir($link)) {
+            if (DRY_RUN || mkdir($link)) {
                 $this->printl('Created dir: ' . $link);
             } else {
                 $this->printl('Failed to create dir: ' . $link);
@@ -102,10 +170,16 @@ class MageLinker {
         $mklink = 'mklink' . ($isDir ? ' /D' : '');
         $command = $mklink . ' ' . $this->safePath($link) . ' ' . $this->safePath($target);
         
-        $output = exec($command, $output, $exit_code);
-        echo $this->printl($exit_code . ': ' . $output);
+        $output = '';
+        $exitCode = 0;
+        if (DRY_RUN) {
+            $output = $command;
+        } else {
+            $output = exec($command, $output, $exitCode);
+        }
+        echo $this->printl($exitCode . ': ' . $output);
         
-        return $exit_code === 0;
+        return $exitCode === 0;
     }
     
     protected function isTbtSharedDir($path) 
@@ -139,7 +213,12 @@ class MageLinker {
     
     protected function safePath($path) 
     {
-        return str_replace('/', DIRECTORY_SEPARATOR, $path);
+        return str_replace('/', DS, $path);
+    }
+    
+    protected function unixPath($path) 
+    {
+        return str_replace('\\', '/', $path);
     }
 
     public function printl($line) 
