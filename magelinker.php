@@ -92,6 +92,8 @@ class MageLinker {
         '/app/design/adminhtml/base/default/layout',
         '/app/design/adminhtml/base/default/template',
         '/js/tbt',
+	    '/skin/adminhtml/base/default/css',
+        '/skin/adminhtml/base/default/images',
         '/skin/adminhtml/default/default/css',
         '/skin/adminhtml/default/default/images',
         '/skin/frontend/base/default/css',
