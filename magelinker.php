@@ -10,7 +10,7 @@ if (SHOW_PARAMS || isset($_GET['debug'])) {
 
 $magePath = getcwd();
 $modulePath = null;
-$isTbtModule = true;
+$isTbtModule = false;
 
 if (isset($_GET['module'])) {
 	$modulePath = $_GET['module'];
@@ -51,7 +51,7 @@ if (DRY_RUN) {
     echo '<p><b>DRY RUN (no linking will be done)</b></p>';
 }
 
-$linker = new MageLinker($magePath, $modulePath);
+$linker = new MageLinker($magePath, $modulePath, $isTbtModule);
 $linker->link();
 echo '<p><b>Done.</b></p>';
 return;
@@ -79,6 +79,7 @@ class MageLinker {
 
     public $magePath;
     public $modulePath;
+	public $isTbtModule;
     
     /* A list of directories which are shared by many modules.
      * These directory trees will be built if they do not exist
@@ -98,10 +99,11 @@ class MageLinker {
         '/skin/frontend/base/default/images',
     );
     
-    function __construct($magePath, $modulePath) 
+    function __construct($magePath, $modulePath, $isTbtModule = false) 
     {
         $this->magePath = $this->unixPath($magePath);
         $this->modulePath = $this->unixPath($modulePath);
+		$this->isTbtModule = $isTbtModule;
     }
     
     public function link() 
@@ -120,8 +122,8 @@ class MageLinker {
         // Base case: if target is a directory, only link if the link direcotry path does not exist
         if (!file_exists($link)) {
         
-            // Only link if not a TBT Shared directory. (eg. 'app/code/community/TBT/)
-            if (!$this->isTbtSharedDir($link)) {
+            // Only link if not a TBT Shared directory. (eg. 'app/code/community/TBT/')
+            if (!$this->isTbtModule || !$this->isTbtSharedDir($link)) {
                 $this->createLink($target, $link, true);
                 return true;
             }
