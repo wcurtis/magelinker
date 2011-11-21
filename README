@@ -1,1 +1,12 @@
-MageLinker is an attempt to make Magento development on Windows easier by providing an easy way to symlink modules into a Magento install.
+Welcome to MageLinker BETA.
+
+MageLinker will symlink your Magento module into any Magento installation
+making it easier and faster for you to manage development of your moduels.
+
+1. Drop the magelinker.php file into your Magento root
+2. Access it in the browser (eg. mystore.dev/magelinker.php)
+3. Enter the module path you wish to link into your dev environment!
+
+Currently compatible with Windows dev environments.
+
+Support for Mac and Linux are one the way.
