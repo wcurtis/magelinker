@@ -8,8 +8,8 @@ making it easier and faster for you to manage development of your modules.
 Compatible with Windows and Unix dev environments (tested on Windows and OSX).
 
 ## Web Usage ##
-1. Drop magelinker.php and web.php into your Magento root
-2. Access it in the browser (eg. mystore.dev/magelinker.php)
+1. Drop magelinker.php and magelinkerweb.php into your Magento root
+2. Access it in the browser (eg. mystore.dev/magelinkerweb.php.php)
 3. Enter the module path you wish to link into your dev environment!
 
 ## Command Line Usage ##
