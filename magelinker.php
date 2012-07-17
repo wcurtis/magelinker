@@ -1,87 +1,36 @@
 <?php
 
-const DS = DIRECTORY_SEPARATOR;
 const DRY_RUN = false;
 const SHOW_PARAMS = false;
 
-if (SHOW_PARAMS || isset($_GET['debug'])) {
-	echoParams();
-}
-
-$magePath = getcwd();
-$modulePath = null;
-$isTbtModule = false;
-
-if (isset($_GET['module'])) {
-	$modulePath = $_GET['module'];
-}
-
-if (isset($_GET['istbtmodule'])) {
-	$isTbtModule = true;
-}
-
-?>
-
-<style>
-.textBox {
-    width:300px;
-}
-</style>
-
-<h1>Mage Linker [Beta]</h1>
-
-<p><b>Mage Path: </b><?php echo $magePath; ?></p>
-
-<form name="input" method="get">
-	<b>Module Path: </b><input type="text" class="textBox" name="module" value="<?php echo dirname($magePath) . DS; ?>" /><br/><br/>
-	<input type="checkbox" name="istbtmodule" value="checked" checked="checked"/>Is TBT module<br /><br/>
-	<input type="submit" value="Submit" />
-</form>
-
-<br/>
-
-<?php 
-
-// Done if no module specified
-if (!$modulePath) {
-	return;
-}
-
-if (DRY_RUN) {
-    echo '<p><b>DRY RUN (no linking will be done)</b></p>';
-}
-
-$linker = new MageLinker($magePath, $modulePath, $isTbtModule);
-$linker->link();
-echo '<p><b>Done.</b></p>';
-return;
-
-/***************************************************
-* HELPER FUNCTIONS START HERE
-***************************************************/
-
-function echoParams() {
-	echo p('POST: ' . print_r($_POST, true));
-	echo p('GET: ' . print_r($_GET));
-	echo p('REQUEST: ' . print_r($_REQUEST));
-}
-
-function p($line)
+/**
+ * MageLinker will symlink your Magento module into any Magento installation
+ * making it easier and faster for you to manage development of your modules.
+ */
+class MageLinker
 {
-	echo '<pre>' . $line . '</pre>';
-}
-
-/***************************************************
- * CLASSES START HERE
- ***************************************************/
-
-class MageLinker {
-
+    /**
+     * The full path to the magento instante we are linking into.
+     */
     public $magePath;
+
+    /**
+     * The path to the module that is being linked into magento.
+     */
     public $modulePath;
-	public $isTbtModule;
-    
-    /* A list of directories which are shared by many modules.
+
+    /**
+     * Determines whether this is a TBT Module - if so, it will respect certain shared directories.
+     */
+    public $isTbtModule;
+
+    /**
+     * Determines how much output is echo'd out.
+     */
+    protected $_debugLevel = 3;
+
+    /**
+     * A list of directories which are shared by many modules.
      * These directory trees will be built if they do not exist
      * rather than symlinked. This prevents a messy symlinking
      * ordeal if for example, the first module symlinks the
@@ -92,7 +41,7 @@ class MageLinker {
         '/app/design/adminhtml/base/default/layout',
         '/app/design/adminhtml/base/default/template',
         '/js/tbt',
-	    '/skin/adminhtml/base/default/css',
+        '/skin/adminhtml/base/default/css',
         '/skin/adminhtml/base/default/images',
         '/skin/adminhtml/default/default/css',
         '/skin/adminhtml/default/default/images',
@@ -100,36 +49,97 @@ class MageLinker {
         '/skin/frontend/base/default/fonts',
         '/skin/frontend/base/default/images',
     );
-    
-    function __construct($magePath, $modulePath, $isTbtModule = false) 
+
+    /**
+     * Constructor just sets the mage path, module path, etc.
+     *
+     * @param $magePath
+     * @param $modulePath
+     * @param bool $isTbtModule
+     */
+    public function __construct($magePath, $modulePath, $isTbtModule = false)
     {
-        $this->magePath = $this->unixPath($magePath);
-        $this->modulePath = $this->unixPath($modulePath);
-		$this->isTbtModule = $isTbtModule;
+        $this->magePath = $this->_unixPath($magePath);
+        $this->modulePath = $this->_unixPath($modulePath);
+        $this->isTbtModule = $isTbtModule;
+        $this->_validatePaths();
     }
-    
-    public function link() 
+
+    /**
+     * Validate the paths that are passed in.  Main use case on this one is when they type in the paths in
+     * the wrong order.
+     *
+     * @throws Exception
+     */
+    protected function _validatePaths()
+    {
+        if (!file_exists("{$this->magePath}/app/Mage.php")) {
+            throw new Exception("The magePath doesn't seem to be correct, can't find app/Mage.php inside {$this->magePath},
+            maybe you entered the module path as the mage path by accident");
+        }
+    }
+
+    /**
+     * Set the debug level, so that more or less output will be given.
+     *
+     * @param $level
+     * @return MageLinker
+     */
+    public function setDebugLevel($level)
+    {
+        $this->_debugLevel = $level;
+
+        return $this;
+    }
+
+    /**
+     * Determine whether or not this is running within a command line context.
+     *
+     * @return bool
+     */
+    protected function _isCommandLine()
+    {
+        if (isset($_SERVER['HTTP_USER_AGENT']) && $_SERVER['HTTP_USER_AGENT']) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Link the module path into the magento path.
+     */
+    public function link()
     {
         $this->recursiveLink($this->modulePath, $this->magePath);
     }
 
-    function recursiveLink($target, $link) 
+    /**
+     * Link a path recursively into a target - loops over all the directories and files in the source file path
+     * and if it's a file, links, if it's a directory only links if it doesn't exist yet.
+     *
+     * @param $target
+     * @param $link
+     * @return bool
+     */
+    public function recursiveLink($target, $link)
     {
         // Base case: if target is a file, just link it and we're done
         if (!is_dir($target)) {
             $this->createLink($target, $link);
             return true;
         }
-        
+
         // Base case: if target is a directory, only link if the link direcotry path does not exist
         if (!file_exists($link)) {
-        
+
             // Only link if not a TBT Shared directory. (eg. 'app/code/community/TBT/')
-            if (!$this->isTbtModule || !$this->isTbtSharedDir($link)) {
+            if (!$this->isTbtModule || !$this->_isTbtSharedDir($link)) {
                 $this->createLink($target, $link, true);
                 return true;
             }
-            
+
             // If it is a TBT Shared directory, just create the dir and continue
             if (DRY_RUN || mkdir($link)) {
                 $this->printl('Created dir: ' . $link);
@@ -140,24 +150,33 @@ class MageLinker {
 
         // 'ls'
         $files = scandir($target);
-        
+
         // Recurse on each file in the directory
         foreach($files as $file) {
-        
+
             // Ignore '.', '..', and hidden files
             if ($file[0] == '.') {
                 continue;
             }
-            
+
             $newTarget = $target . '/' . $file;
             $newLink = $link . '/' . $file;
             $this->recursiveLink($newTarget, $newLink);
         }
-        
+
         return true;
     }
 
-    function createLink($target, $link, $isDir = false, $force = false) 
+    /**
+     * Create symlink from a given path to a target path.
+     *
+     * @param $target
+     * @param $link
+     * @param bool $isDir
+     * @param bool $force
+     * @return bool
+     */
+    public function createLink($target, $link, $isDir = false, $force = false)
     {
         // Skip if target does not exist
         if (!file_exists($target)) {
@@ -171,15 +190,15 @@ class MageLinker {
                 $this->printl('Removing old link: ' . $link);
                 unlink($link);
             } else {
-                $this->printl('Link already exists (use force option to override): ' . $link);
+                if ($this->_debugLevel >= 3) {
+                    $this->printl('Link already exists (use force option to override): ' . $link);
+                }
                 return false;
             }
         }
 
-        // Create symlink
-        $mklink = 'mklink' . ($isDir ? ' /D' : '');
-        $command = $mklink . ' ' . $this->safePath($link) . ' ' . $this->safePath($target);
-        
+        $command = $this->_getSymlinkCommand($target, $link, $isDir);
+
         $output = '';
         $exitCode = 0;
         if (DRY_RUN) {
@@ -187,17 +206,49 @@ class MageLinker {
         } else {
             $output = exec($command, $output, $exitCode);
         }
-        echo $this->printl($exitCode . ': ' . $output);
-        
+
+        if ($this->_debugLevel >= 3) {
+            echo $this->printl($exitCode . ': ' . $output);
+        }
+
         return $exitCode === 0;
     }
-    
-    protected function isTbtSharedDir($path) 
+
+    /**
+     * Get the command to do a symlink, based on whether in Unix or Win environment.
+     *
+     * @param $target
+     * @param $link
+     * @param bool $isDir
+     * @return string
+     */
+    protected function _getSymlinkCommand($target, $link, $isDir = false)
+    {
+        $target = $this->_safePath($target);
+        $link = $this->_safePath($link);
+
+        if ($this->_isUnix()) {
+            $command = "ln -s '$target' '$link'";
+        } else {
+            $mklink = 'mklink' . ($isDir ? ' /D' : '');
+            $command = "$mklink $link $target";
+        }
+
+        return $command;
+    }
+
+    /**
+     * Determine whether a given path is a TBT shared directory.  Just checks against our array of shared directories.
+     *
+     * @param $path
+     * @return bool
+     */
+    protected function _isTbtSharedDir($path)
     {
         foreach ($this->tbtSharedDirs as $sharedPath) {
-            
+
             $fullMagePath = $this->magePath . $sharedPath;
-        
+
             if (strpos($fullMagePath, $path) !== false) {
                 // return true if the path in contained in a TBT Shared path
                 return true;
@@ -205,36 +256,54 @@ class MageLinker {
         }
         return false;
     }
-    
-    protected function endsWithTbtSharedPath($path) 
+
+    /**
+     * Use a universal directory separator to makes paths cross platform compatible.
+     *
+     * @param $path
+     * @return mixed
+     */
+    protected function _safePath($path)
     {
-        foreach ($this->tbtSharedDirs as $createDir) {
-            if ($this->endsWith($path, $createDir)) {
-                return true;
-            }
+        return str_replace('/', DIRECTORY_SEPARATOR, $path);
+    }
+
+    /**
+     * Determine whether we're in Windows or Unix
+     *
+     * @return bool
+     */
+    protected function _isUnix()
+    {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            return false;
+        } else {
+            return true;
         }
-        return false;
     }
-    
-    protected function endsWith($string, $ending) 
-    {
-        return substr_compare($string, $ending, -strlen($ending), strlen($ending)) === 0;
-    }
-    
-    protected function safePath($path) 
-    {
-        return str_replace('/', DS, $path);
-    }
-    
-    protected function unixPath($path) 
+
+    /**
+     * Convert a windows style file path to a unix style file path.
+     *
+     * @param $path
+     * @return mixed
+     */
+    protected function _unixPath($path)
     {
         return str_replace('\\', '/', $path);
     }
 
-    public function printl($line) 
+    /**
+     * Output formatting.
+     *
+     * @param $line
+     */
+    public function printl($line)
     {
-        echo '<pre>' . $line . '</pre>';
+        if ($this->_isCommandLine()) {
+            echo $line . "\r\n";
+        } else {
+            echo '<pre>' . $line . '</pre>';
+        }
     }
 }
-
-?>
