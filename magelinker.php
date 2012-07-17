@@ -29,12 +29,13 @@ class MageLinker
      */
     protected $_debugLevel = 3;
 
-    /* A list of directories which are shared by many modules.
-    * These directory trees will be built if they do not exist
-    * rather than symlinked. This prevents a messy symlinking
-    * ordeal if for example, the first module symlinks the
-    * first TBT directory.
-    */
+    /**
+     * A list of directories which are shared by many modules.
+     * These directory trees will be built if they do not exist
+     * rather than symlinked. This prevents a messy symlinking
+     * ordeal if for example, the first module symlinks the
+     * first TBT directory.
+     */
     private $tbtSharedDirs = array (
         '/app/code/community/TBT',
         '/app/design/adminhtml/base/default/layout',
