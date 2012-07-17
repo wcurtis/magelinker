@@ -22,10 +22,9 @@ if (isset($_GET['magePath'])) {
     $magePath = $_GET['magePath'];
 }
 
-
 ?>
 
-<style>
+<style xmlns="http://www.w3.org/1999/html">
     .textBox {
         width:300px;
     }
@@ -36,7 +35,7 @@ if (isset($_GET['magePath'])) {
 
 
 <form name="input" method="get">
-    <p><b>Mage Path: </b><input type="text" class="textBox" name="magePath" value="<?php echo $magePath; ?>" /></p>
+    <p><b>Mage Path: </b><?php echo $magePath; ?></b></p>
     <b>Module Path: </b><input type="text" class="textBox" name="module" value="<?php echo dirname($magePath) . DIRECTORY_SEPARATOR; ?>" /><br/><br/>
     <input type="checkbox" name="istbtmodule" value="checked" checked="checked"/>Is TBT module<br /><br/>
     <input type="submit" value="Submit" />
