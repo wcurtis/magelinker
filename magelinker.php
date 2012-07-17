@@ -244,7 +244,11 @@ class MageLinker
 
     protected function _isUnix()
     {
-        return true;
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /**
