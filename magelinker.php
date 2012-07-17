@@ -64,6 +64,12 @@ class MageLinker
         $this->_validatePaths();
     }
 
+    /**
+     * Validate the paths that are passed in.  Main use case on this one is when they type in the paths in
+     * the wrong order.
+     *
+     * @throws Exception
+     */
     protected function _validatePaths()
     {
         if (!file_exists("{$this->magePath}/app/Mage.php")) {
@@ -72,6 +78,12 @@ class MageLinker
         }
     }
 
+    /**
+     * Set the debug level, so that more or less output will be given.
+     *
+     * @param $level
+     * @return MageLinker
+     */
     public function setDebugLevel($level)
     {
         $this->_debugLevel = $level;
@@ -79,6 +91,11 @@ class MageLinker
         return $this;
     }
 
+    /**
+     * Determine whether or not this is running within a command line context.
+     *
+     * @return bool
+     */
     protected function _isCommandLine()
     {
         if (isset($_SERVER['HTTP_USER_AGENT']) && $_SERVER['HTTP_USER_AGENT']) {
@@ -196,6 +213,14 @@ class MageLinker
         return $exitCode === 0;
     }
 
+    /**
+     * Get the command to do a symlink, based on whether in Unix or Win environment.
+     *
+     * @param $target
+     * @param $link
+     * @param bool $isDir
+     * @return string
+     */
     protected function _getSymlinkCommand($target, $link, $isDir = false)
     {
         $target = $this->_safePath($target);
@@ -242,6 +267,11 @@ class MageLinker
         return str_replace('/', DIRECTORY_SEPARATOR, $path);
     }
 
+    /**
+     * Determine whether we're in Windows or Unix
+     *
+     * @return bool
+     */
     protected function _isUnix()
     {
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
